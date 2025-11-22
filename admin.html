@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>صفحة الإدارة - المركز الطبي</title>
+    <link rel="stylesheet" href="style.css"> 
+</head>
+<body class="bg-gray-100 min-h-screen p-6">
+
+    <div class="max-w-6xl mx-auto bg-white p-8 rounded-xl shadow-2xl">
+        <h2 class="text-3xl font-bold text-center text-blue-800 border-b pb-4 mb-8">لوحة تحكم النظام المركزي</h2>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <section class="lg:col-span-1 bg-blue-50 p-6 rounded-lg shadow-inner">
+                <h3 class="text-xl font-semibold text-blue-700 border-b pb-2 mb-4">الإعدادات العامة</h3>
+                <form id="settings-form" class="space-y-4">
+                    <label class="block">
+                        <span class="text-gray-700">اسم المركز:</span>
+                        <input type="text" id="center-name-input" class="form-input mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required>
+                    </label>
+                    <label class="block">
+                        <span class="text-gray-700">سرعة النطق (1.0 افتراضي):</span>
+                        <input type="number" step="0.1" min="0.5" max="2.0" id="audio-speed-input" class="form-input mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
+                    </label>
+                    <label class="block">
+                        <span class="text-gray-700">محتوى شريط الأخبار المتحرك:</span>
+                        <textarea id="scroll-text-input" class="form-textarea mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" rows="2"></textarea>
+                    </label>
+                    <label class="block">
+                        <span class="text-gray-700">مسار الصوت الافتراضي (مثلاً: audio/):</span>
+                        <input type="text" id="audio-path-input" class="form-input mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
+                    </label>
+                    <label class="block">
+                        <span class="text-gray-700">مسار الميديا الافتراضي (مثلاً: media/):</span>
+                        <input type="text" id="media-path-input" class="form-input mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
+                    </label>
+                    <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded-lg font-bold hover:bg-blue-700 transition">حفظ الإعدادات</button>
+                </form>
+            </section>
+
+            <section class="lg:col-span-2 bg-green-50 p-6 rounded-lg shadow-inner">
+                <h3 class="text-xl font-semibold text-green-700 border-b pb-2 mb-4">إدارة العيادات (CRUD)</h3>
+                
+                <form id="clinic-form" class="grid grid-cols-4 gap-4 mb-6">
+                    <input type="hidden" id="clinic-id-edit">
+                    <input type="text" id="clinic-name-input" placeholder="اسم العيادة" class="col-span-2 p-2 border rounded-md" required>
+                    <input type="password" id="clinic-password-input" placeholder="كلمة السر" class="col-span-1 p-2 border rounded-md" required>
+                    <button type="submit" id="clinic-submit-btn" class="col-span-1 bg-green-600 text-white rounded-md font-bold hover:bg-green-700 transition">إضافة عيادة</button>
+                </form>
+                
+                <div id="clinics-list" class="space-y-2">
+                    </div>
+            </section>
+        </div>
+
+        <section class="mt-8">
+            <h3 class="text-2xl font-semibold text-gray-700 border-b pb-2 mb-4">النداءات الفورية، التقييم والسجل</h3>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-yellow-50 p-4 rounded-lg shadow">
+                    <h4 class="font-bold mb-2">نداء فوري وملفات جاهزة</h4>
+                    <div class="flex space-x-2 space-x-reverse mb-2">
+                        <input type="text" id="tts-call-text" placeholder="نطق نص مخصص (TTS)" class="flex-grow p-2 border rounded-md">
+                        <button id="btn-tts-call" class="bg-yellow-600 text-white p-2 rounded-md font-bold">نطق</button>
+                    </div>
+                    <div class="flex space-x-2 space-x-reverse">
+                        <select id="instant-audio-select" class="flex-grow p-2 border rounded-md">
+                            <option value="">اختر ملف صوت جاهز...</option>
+                            <option value="welcome.mp3">مرحباً</option>
+                            <option value="notice.mp3">تنبيه هام</option>
+                        </select>
+                        <button id="btn-instant-call" class="bg-yellow-700 text-white p-2 rounded-md font-bold">إذاعة</button>
+                    </div>
+                </div>
+
+                <div class="bg-purple-50 p-4 rounded-lg shadow">
+                    <h4 class="font-bold mb-2">إحصائيات التقييم (اقتراح إضافي)</h4>
+                    <p class="text-xl font-bold text-gray-700">متوسط التقييم العام:</p>
+                    <p id="avg-rating" class="text-4xl font-black text-purple-700">---</p>
+                    <button id="view-ratings" class="mt-2 bg-purple-600 text-white p-2 rounded-md font-bold hover:bg-purple-700 transition">عرض التفاصيل</button>
+                </div>
+            </div>
+            
+            <div class="mt-6 bg-gray-50 p-4 rounded-lg shadow">
+                <h4 class="font-bold mb-2">سجل آخر 20 نداء</h4>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead>
+                            <tr>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الرقم</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">العيادة</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">النوع</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">التوقيت</th>
+                            </tr>
+                        </thead>
+                        <tbody id="calls-log" class="bg-white divide-y divide-gray-200">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </section>
+
+    </div>
+
+    <script type="module" src="js/firebaseConfig.js"></script>
+    <script type="module" src="js/textToSpeech.js"></script>
+    <script type="module" src="js/admin.js"></script>
+</body>
+</html>
