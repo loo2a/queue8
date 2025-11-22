@@ -3,113 +3,213 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>صفحة التحكم - المركز الطبي</title>
-    
+    <title>صفحة التحكم بالعيادة</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    
-<script src="https://cdn.tailwindcss.com"></script>
-
-
-<style>
-    /* تنسيقات الإشعارات اللحظية (Toast) */
-    #toast-container {
-        position: fixed;
-        bottom: 1rem;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 1000;
-        display: flex;
-        flex-direction: column-reverse; 
-        gap: 0.5rem;
-    }
-    .toast {
-        background-color: #333;
-        color: white;
-        padding: 0.75rem 1.5rem;
-        border-radius: 0.5rem;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        opacity: 0;
-        transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
-        transform: translateY(10px);
-        min-width: 250px;
-        text-align: center;
-    }
-    .toast.show {
-        opacity: 1;
-        transform: translateY(0);
-    }
-</style>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 </head>
-<body class="bg-gray-100 min-h-screen p-4">
+<body class="bg-gray-50 p-8">
 
-    <div id="login-screen" class="max-w-md mx-auto bg-white p-8 rounded-xl shadow-2xl mt-10">
-        <h2 class="text-3xl font-bold text-center text-blue-800 mb-6">تسجيل الدخول لغرفة التحكم</h2>
-        <form id="login-form">
-            <div class="mb-4">
-                <label for="clinic-select" class="block text-gray-700 font-semibold mb-2">اختر العيادة:</label>
-                <select id="clinic-select" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-lg">
-                    </select>
-            </div>
-            <div class="mb-6">
-                <label for="clinic-password" class="block text-gray-700 font-semibold mb-2">كلمة السر:</label>
-                <input type="password" id="clinic-password" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-lg">
-            </div>
-            <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-lg font-bold text-xl hover:bg-blue-700 transition">دخول</button>
-        </form>
+    <div id="authScreen" class="max-w-md mx-auto bg-white p-6 rounded-xl shadow-lg mt-20">
+        <h2 class="text-3xl font-bold text-center text-blue-700 mb-6">الدخول لعيادة</h2>
+        <select id="clinicAuthSelect" class="w-full p-3 border border-gray-300 rounded-lg mb-4 text-lg">
+            <option value="">-- اختر العيادة --</option>
+            </select>
+        <input type="password" id="clinicPasswordAuth" placeholder="كلمة مرور العيادة" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-lg">
+        <button id="loginBtn" class="mt-4 w-full bg-blue-600 text-white p-3 rounded-lg text-xl hover:bg-blue-700 transition">دخول</button>
+        <p id="authError" class="text-red-500 text-center mt-3 hidden">بيانات الدخول غير صحيحة.</p>
     </div>
 
-    <div id="control-panel" class="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-2xl mt-10 hidden">
-        <h2 class="text-3xl font-bold text-blue-800 border-b pb-4 mb-6 flex justify-between items-center">
-            <span id="control-clinic-name"></span>
-            <span class="text-xl font-medium text-gray-500">الرقم الحالي: <span id="current-patient-number" class="text-blue-600 font-extrabold">--</span></span>
-        </h2>
-
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <button id="next-client" class="btn-control bg-green-500 hover:bg-green-600 text-white p-4 rounded-xl text-lg font-bold">العميل التالي (نداء)</button>
-            <button id="repeat-call" class="btn-control bg-yellow-500 hover:bg-yellow-600 text-white p-4 rounded-xl text-lg font-bold">تكرار النداء</button>
-            <button id="prev-client" class="btn-control bg-orange-500 hover:bg-orange-600 text-white p-4 rounded-xl text-lg font-bold">العميل السابق</button>
-            <button id="reset-clinic" class="btn-control bg-red-500 hover:bg-red-600 text-white p-4 rounded-xl text-lg font-bold">تصفير العيادة</button>
+    <div id="controlPanel" class="hidden max-w-2xl mx-auto bg-white p-6 rounded-xl shadow-lg text-center">
+        <h1 class="text-4xl font-extrabold text-blue-800 mb-2">لوحة تحكم <span id="currentClinicName" class="text-red-600"></span></h1>
+        <p class="text-xl text-gray-600 mb-6">العميل الحالي: <span id="currentNumberDisplay" class="font-black text-4xl text-red-700">0</span></p>
+        
+        <div class="grid grid-cols-2 gap-4 mb-6">
+            <button id="nextBtn" class="bg-green-600 text-white p-4 rounded-xl text-2xl font-bold hover:bg-green-700 transition shadow-lg">العميل التالي (نداء)</button>
+            <button id="repeatBtn" class="bg-yellow-600 text-white p-4 rounded-xl text-2xl font-bold hover:bg-yellow-700 transition shadow-lg">تكرار النداء</button>
         </div>
 
-        <h3 class="text-2xl font-semibold text-gray-700 border-b pb-2 mb-4">إجراءات متقدمة</h3>
-        <div class="space-y-4">
-
-            <div class="flex space-x-2 space-x-reverse">
-                <input type="number" id="call-specific-number" placeholder="نداء رقم عميل معين..." class="flex-grow p-3 border rounded-lg">
-                <button id="btn-call-specific" class="bg-indigo-500 hover:bg-indigo-600 text-white p-3 rounded-lg font-bold">نداء</button>
-            </div>
-
-            <div class="flex space-x-2 space-x-reverse">
-                <input type="text" id="display-custom-name" placeholder="عرض اسم (أو رسالة) على الشاشة ونطقه..." class="flex-grow p-3 border rounded-lg">
-                <button id="btn-display-custom" class="bg-purple-500 hover:bg-purple-600 text-white p-3 rounded-lg font-bold">عرض ونطق</button>
-            </div>
+        <div class="grid grid-cols-3 gap-3 mb-6">
+            <button id="prevBtn" class="bg-gray-500 text-white p-3 rounded-lg hover:bg-gray-600 transition">العميل السابق</button>
+            <button onclick="resetClinic()" class="bg-red-500 text-white p-3 rounded-lg hover:bg-red-600 transition">تصفير العيادة</button>
             
-            <div class="flex">
-                <input type="text" id="emergency-text" value="نداء للطوارئ في عيادة " placeholder="رسالة الطوارئ..." class="flex-grow p-3 border rounded-lg">
-                <button id="btn-emergency-call" class="bg-red-700 hover:bg-red-800 text-white p-3 rounded-lg font-bold mr-2">نداء الطوارئ</button>
+            <button id="toggleStatusBtn" onclick="toggleClinicStatus()" class="bg-indigo-500 text-white p-3 rounded-lg hover:bg-indigo-600 transition">إيقاف العيادة</button>
+        </div>
+        
+        <div class="bg-gray-100 p-4 rounded-lg mb-6">
+            <h3 class="text-xl font-semibold mb-3">نداء مخصص</h3>
+            <div class="grid grid-cols-2 gap-3 mb-3">
+                <input type="number" id="specificNumberInput" placeholder="نداء رقم عميل معين" class="p-2 border rounded-md">
+                <button onclick="callSpecificNumber()" class="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition">نداء رقم</button>
             </div>
-
-            <div class="flex justify-start space-x-4 space-x-reverse">
-                <button id="toggle-clinic-status" class="bg-gray-500 hover:bg-gray-600 text-white p-3 rounded-lg font-bold w-40">إيقاف العيادة</button>
+            <div class="grid grid-cols-2 gap-3">
+                <input type="text" id="emergencyTextInput" placeholder="نص نداء الطوارئ/اسم عميل" class="p-2 border rounded-md">
+                <button onclick="callEmergency()" class="bg-red-700 text-white p-2 rounded-lg hover:bg-red-800 transition">نداء للطوارئ/اسم</button>
             </div>
-            
         </div>
 
-        <div class="border-t pt-4 mt-8 flex justify-between items-center">
-            <button id="logout-btn" class="bg-red-600 text-white p-3 rounded-lg font-bold hover:bg-red-700 transition">الخروج</button>
-            
-            <button id="control-mute-toggle" class="p-3 bg-blue-500 text-white rounded-full shadow-md hover:bg-blue-600">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 110 7.072L10.96 11H7a1 1 0 01-1-1V9a1 1 0 011-1h3.96l4.576-2.536z" />
-                </svg>
+        <div class="flex justify-between items-center bg-gray-200 p-3 rounded-lg">
+            <button id="logoutBtn" onclick="location.reload()" class="bg-gray-600 text-white p-2 rounded-lg hover:bg-gray-700 transition">الخروج إلى الرئيسية</button>
+            <button id="muteToggle" class="text-gray-600 hover:text-red-600 p-2 rounded-lg focus:outline-none">
+                <span id="muteStatusText">تفعيل النطق</span>
             </button>
         </div>
+
     </div>
+
+    <script src="js/script.js"></script>
     
-    <div id="toast-container"></div>
-    
-    <script type="module" src="js/firebaseConfig.js"></script>
-    <script type="module" src="js/textToSpeech.js"></script>
-    <script type="module" src="js/control.js"></script>
+    <script>
+        let clinicsData = {};
+        let currentClinicId = null;
+        let currentClinicPass = '';
+        let isMutedControl = false; // كتم الصوت خاص بصفحة التحكم فقط
+
+        // ==========================================================
+        // وظائف المصادقة
+        // ==========================================================
+        db.ref('clinics').on('value', snapshot => {
+            clinicsData = snapshot.val() || {};
+            const selectEl = document.getElementById('clinicAuthSelect');
+            selectEl.innerHTML = '<option value="">-- اختر العيادة --</option>';
+            Object.keys(clinicsData).forEach(id => {
+                const clinic = clinicsData[id];
+                selectEl.innerHTML += `<option value="${id}">${clinic.name} (${id})</option>`;
+            });
+
+            // تحديث حالة الشاشة إذا كان المستخدم مسجلاً الدخول
+            if (currentClinicId) {
+                updateControlPanel(clinicsData[currentClinicId]);
+            }
+        });
+        
+        document.getElementById('loginBtn').addEventListener('click', () => {
+            const id = document.getElementById('clinicAuthSelect').value;
+            const password = document.getElementById('clinicPasswordAuth').value;
+            
+            if (!id || !password || !clinicsData[id] || clinicsData[id].password !== password) {
+                document.getElementById('authError').classList.remove('hidden');
+                return;
+            }
+
+            currentClinicId = id;
+            currentClinicPass = password;
+            document.getElementById('authScreen').classList.add('hidden');
+            document.getElementById('controlPanel').classList.remove('hidden');
+            updateControlPanel(clinicsData[id]);
+        });
+        
+        function updateControlPanel(clinic) {
+            if (!clinic) return;
+            document.getElementById('currentClinicName').textContent = clinic.name;
+            document.getElementById('currentNumberDisplay').textContent = clinic.currentNumber;
+
+            // تحديث زر الحالة
+            const statusBtn = document.getElementById('toggleStatusBtn');
+            if (clinic.status === 'active') {
+                statusBtn.textContent = 'إيقاف العيادة';
+                statusBtn.classList.replace('bg-green-500', 'bg-indigo-500');
+            } else {
+                statusBtn.textContent = 'استئناف العيادة';
+                statusBtn.classList.replace('bg-indigo-500', 'bg-green-500');
+            }
+        }
+
+        // ==========================================================
+        // وظائف التحكم في الأرقام والحالة
+        // ==========================================================
+        
+        document.getElementById('nextBtn').addEventListener('click', () => {
+            if (!currentClinicId) return;
+            const clinicRef = db.ref(`clinics/${currentClinicId}`);
+            clinicRef.once('value').then(snapshot => {
+                const currentTicket = snapshot.val().ticketCounter + 1;
+                // تحديث كلاً من العداد ورقم النداء الحالي
+                clinicRef.update({
+                    currentNumber: currentTicket,
+                    ticketCounter: currentTicket
+                }).then(() => {
+                    // إرسال طلب نداء عبر دالة callNumber المشتركة
+                    if (!isMutedControl) {
+                        window.callNumber(parseInt(currentClinicId), currentTicket, 'normal');
+                    }
+                });
+            });
+        });
+
+        document.getElementById('prevBtn').addEventListener('click', () => {
+             if (!currentClinicId) return;
+             const currentNum = clinicsData[currentClinicId].currentNumber;
+             if (currentNum > 1) {
+                 db.ref(`clinics/${currentClinicId}`).update({
+                     currentNumber: currentNum - 1
+                 }).then(() => {
+                    alert('تم الرجوع للعميل السابق (تحديث الشاشة الرئيسية).');
+                 });
+             }
+        });
+
+        document.getElementById('repeatBtn').addEventListener('click', () => {
+             if (!currentClinicId) return;
+             const currentNum = clinicsData[currentClinicId].currentNumber;
+             if (currentNum > 0 && !isMutedControl) {
+                 window.callNumber(parseInt(currentClinicId), currentNum, 'normal');
+             }
+        });
+
+        function resetClinic() {
+            if (!currentClinicId || !confirm('هل أنت متأكد من تصفير رقم العيادة؟')) return;
+            db.ref(`clinics/${currentClinicId}`).update({
+                 currentNumber: 0,
+                 ticketCounter: 0
+            }).then(() => alert('تم تصفير العيادة بنجاح.'));
+        }
+
+        function toggleClinicStatus() {
+            if (!currentClinicId) return;
+            const newStatus = clinicsData[currentClinicId].status === 'active' ? 'inactive' : 'active';
+            db.ref(`clinics/${currentClinicId}`).update({
+                 status: newStatus
+            }).then(() => alert(`تم ${newStatus === 'active' ? 'استئناف' : 'إيقاف'} العيادة.`));
+        }
+
+        // ==========================================================
+        // وظائف النداء المخصص
+        // ==========================================================
+
+        function callSpecificNumber() {
+            const number = parseInt(document.getElementById('specificNumberInput').value);
+             if (!currentClinicId || isNaN(number) || number <= 0) {
+                alert('الرجاء إدخال رقم صحيح للنداء.');
+                return;
+            }
+            // تحديث الرقم الحالي وإرسال نداء
+            db.ref(`clinics/${currentClinicId}`).update({ currentNumber: number }).then(() => {
+                if (!isMutedControl) {
+                    window.callNumber(parseInt(currentClinicId), number, 'normal');
+                }
+            });
+        }
+        
+        function callEmergency() {
+            const text = document.getElementById('emergencyTextInput').value || "نداء طوارئ، يرجى الحضور فوراً!";
+            // النداء باسم يستخدم type='name' والطوارئ يستخدم type='emergency'
+            const type = text.includes('طوارئ') ? 'emergency' : 'name';
+            
+            if (!isMutedControl) {
+                // نستخدم رقم العيادة الحالي كـ ID للعرض
+                window.callNumber(parseInt(currentClinicId), 0, type, text); 
+            }
+        }
+        
+        // ==========================================================
+        // وظائف كتم الصوت
+        // ==========================================================
+        document.getElementById('muteToggle').addEventListener('click', () => {
+            isMutedControl = !isMutedControl;
+            document.getElementById('muteStatusText').textContent = isMutedControl ? 'تفعيل النطق' : 'إيقاف النطق';
+            alert(isMutedControl ? "تم كتم صوت التنبيهات في هذه الشاشة." : "تم تفعيل صوت التنبيهات في هذه الشاشة.");
+        });
+    </script>
 </body>
 </html>
