@@ -3,32 +3,229 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>صفحة الدخول الرئيسية للنظام</title>
-    
+    <title>شاشة عرض النداء - المركز الطبي</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .clinic-card {
+            transition: all 0.3s ease;
+        }
+        .blink {
+            animation: blinker 1s linear infinite;
+        }
+        @keyframes blinker {
+            50% { opacity: 0; }
+        }
+        .notification-banner {
+            top: -100px; /* مخفية في البداية */
+            transition: top 0.5s ease-in-out;
+        }
+        .notification-banner.show {
+            top: 0;
+        }
+        .emergency {
+            background-color: #ef4444; /* red-500 */
+        }
+        /* لإجبار مشغل الفيديو على العمل محليًا */
+        video::-webkit-media-controls-enclosure {
+            display:none !important;
+        }
+        video {
+            pointer-events: none;
+        }
+    </style>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode.js@0.0.2/qrcode.min.js"></script>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+<body class="bg-gray-100 flex flex-col h-screen overflow-hidden">
 
-    <div class="max-w-xl w-full bg-white p-10 rounded-xl shadow-2xl text-center">
-        <h1 class="text-4xl font-extrabold text-blue-800 mb-8 border-b pb-4">نظام إدارة صف الانتظار</h1>
-        
-        <div class="space-y-4">
-            <a href="display.html" class="block bg-green-600 text-white p-4 rounded-lg text-xl font-bold hover:bg-green-700 transition shadow-lg">
-                🖥️ شاشة عرض العملاء (Display)
-            </a>
-            <a href="control.html" class="block bg-indigo-600 text-white p-4 rounded-lg text-xl font-bold hover:bg-indigo-700 transition shadow-lg">
-                🕹️ صفحة التحكم بالعيادات (Control)
-            </a>
-            <a href="admin.html" class="block bg-purple-600 text-white p-4 rounded-lg text-xl font-bold hover:bg-purple-700 transition shadow-lg">
-                ⚙️ صفحة الإدارة والإعداد (Admin)
-            </a>
-            <a href="ticket.html" class="block bg-red-600 text-white p-4 rounded-lg text-xl font-bold hover:bg-red-700 transition shadow-lg">
-                🖨️ صفحة طباعة التذاكر (Ticket)
-            </a>
-        </div>
-        
-        <p class="mt-8 text-gray-500 text-sm">استخدم هذه الروابط للوصول إلى مكونات النظام المختلفة.</p>
+    <div id="notificationBanner" class="notification-banner fixed w-full bg-blue-600 text-white text-4xl p-4 text-center z-50 shadow-2xl">
+        جملة النداء تظهر هنا
     </div>
 
+    <header class="bg-white shadow-md p-3 flex justify-between items-center z-10">
+        <h1 id="centerName" class="text-3xl font-bold text-gray-800">المركز الطبي</h1>
+        <div class="flex items-center space-x-4 space-x-reverse text-gray-600 text-xl">
+            <span id="currentDate"></span>
+            <span id="currentTime"></span>
+            <button id="muteToggle" class="text-gray-500 hover:text-red-600 focus:outline-none">
+                <svg id="volumeIcon" class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path d="M10 20a10 10 0 1 1 0-20 10 10 0 0 1 0 20zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM9 9H7V7h2v2zm4 0h-2V7h2v2zM9 13H7v-2h2v2zm4 0h-2v-2h2v2z"/></svg>
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 flex p-4 overflow-hidden">
+        <div id="clinicsContainer" class="w-2/5 flex flex-col space-y-4 overflow-y-auto pl-4">
+            </div>
+
+        <div class="w-3/5 bg-gray-200 rounded-lg shadow-inner overflow-hidden">
+            <video id="mediaPlayer" class="w-full h-full object-cover" loop autoplay muted playsinline></video>
+        </div>
+    </main>
+
+    <footer class="bg-blue-800 text-white p-2 text-2xl overflow-hidden shadow-2xl z-10">
+        <marquee id="newsTicker" behavior="scroll" direction="right" scrollamount="8" class="py-1">
+            محتوى شريط الأخبار المتحرك يظهر هنا
+        </marquee>
+    </footer>
+
+    <script src="js/script.js"></script>
+
+    <script>
+        // ==========================================================
+        // وظائف الواجهة (index.html)
+        // ==========================================================
+        const centerNameEl = document.getElementById('centerName');
+        const newsTickerEl = document.getElementById('newsTicker');
+        const mediaPlayer = document.getElementById('mediaPlayer');
+        const clinicsContainer = document.getElementById('clinicsContainer');
+        const bannerEl = document.getElementById('notificationBanner');
+        const muteToggleBtn = document.getElementById('muteToggle');
+        const volumeIcon = document.getElementById('volumeIcon');
+
+        let isMuted = false;
+
+        // تحديث الوقت والتاريخ
+        function updateDateTime() {
+            const now = new Date();
+            const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+            const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+            document.getElementById('currentDate').textContent = now.toLocaleDateString('ar-EG', dateOptions);
+            document.getElementById('currentTime').textContent = now.toLocaleTimeString('ar-EG', timeOptions);
+        }
+        setInterval(updateDateTime, 1000);
+        updateDateTime();
+
+
+        // إنشاء كارت العيادة
+        function createClinicCard(id, name, currentNumber, status) {
+            const statusColor = status === 'active' ? 'bg-green-500' : 'bg-gray-400';
+            const statusText = status === 'active' ? 'نشط' : 'متوقفة حالياً';
+            
+            const card = document.createElement('div');
+            card.id = `clinic-${id}`;
+            card.className = `clinic-card bg-white p-4 rounded-xl shadow-lg border-b-4 ${status === 'active' ? 'border-blue-500' : 'border-gray-500'} flex justify-between items-start`;
+            
+            card.innerHTML = `
+                <div class="flex-1">
+                    <h2 class="text-3xl font-extrabold text-blue-700 mb-2">${name}</h2>
+                    <p class="text-xl text-gray-600 mb-2">العميل الحالي:</p>
+                    <span class="text-6xl font-black text-red-600">${currentNumber}</span>
+                    <div class="mt-2 text-lg font-semibold text-white px-3 py-1 rounded-full ${statusColor}">${statusText}</div>
+                </div>
+                <div id="qrcode-${id}" class="w-20 h-20 bg-white p-1 border border-gray-300"></div>
+            `;
+
+            // توليد QR Code (يفترض أن يقود إلى صفحة طباعة التذكرة مثلاً)
+            setTimeout(() => {
+                new QRCode(document.getElementById(`qrcode-${id}`), {
+                    text: `${window.location.origin}/print.html?clinic=${id}`,
+                    width: 70,
+                    height: 70
+                });
+            }, 0);
+
+            return card;
+        }
+        
+        // ==========================================================
+        // وظائف النداء المرئية
+        // ==========================================================
+        window.showCallNotification = (text, type, clinicId) => {
+            bannerEl.textContent = text;
+            bannerEl.className = 'notification-banner fixed w-full text-white text-4xl p-4 text-center z-50 shadow-2xl show';
+            bannerEl.classList.add(type === 'emergency' ? 'emergency' : 'bg-blue-600');
+            // التأكد من أن الوميض يتم تفعيله عند ظهور الـ Banner
+            window.toggleClinicBlink(clinicId, true); 
+        };
+
+        window.hideCallNotification = () => {
+            bannerEl.className = 'notification-banner fixed w-full text-white text-4xl p-4 text-center z-50 shadow-2xl';
+            // التأكد من إزالة جميع الألوان
+            bannerEl.classList.remove('bg-blue-600', 'emergency');
+            // إزالة الوميض سيتم في دالة النداء الرئيسية
+        };
+
+        window.toggleClinicBlink = (clinicId, isBlinking) => {
+            const card = document.getElementById(`clinic-${clinicId}`);
+            if (card) {
+                card.classList.toggle('blink', isBlinking);
+                // تغيير لون الحافة عند الوميض
+                card.classList.toggle('border-yellow-500', isBlinking);
+                card.classList.toggle('border-blue-500', !isBlinking);
+            }
+        };
+
+        // ==========================================================
+        // الاتصال بقاعدة البيانات
+        // ==========================================================
+        
+        let clinicsData = {}; // تخزين بيانات العيادات محلياً
+
+        // قراءة الإعدادات والعيادات
+        db.ref('/').on('value', snapshot => {
+            const data = snapshot.val();
+            if (!data) return;
+
+            const settings = data.settings || {};
+            clinicsData = data.clinics || {};
+
+            // 1. تحديث الإعدادات المرئية
+            centerNameEl.textContent = settings.centerName || 'المركز الطبي';
+            newsTickerEl.textContent = settings.newsTicker || 'محتوى الأخبار غير متوفر';
+            mediaPlayer.src = settings.mediaPath ? `${settings.mediaPath}video1.mp4` : ''; // افترضنا وجود video1.mp4
+            if (mediaPlayer.src) mediaPlayer.load();
+
+            // 2. تحديث كروت العيادات
+            clinicsContainer.innerHTML = '';
+            const clinicKeys = Object.keys(clinicsData).sort((a, b) => parseInt(a) - parseInt(b));
+            clinicKeys.forEach(key => {
+                const clinic = clinicsData[key];
+                clinicsContainer.appendChild(createClinicCard(clinic.id, clinic.name, clinic.currentNumber, clinic.status));
+            });
+        });
+
+        // مراقبة قائمة النداءات (callsQueue)
+        db.ref('callsQueue').on('child_added', snapshot => {
+            const call = snapshot.val();
+            const settingsRef = db.ref('settings');
+            
+            // قراءة الإعدادات لضمان وجود مسار الصوت الصحيح قبل النداء
+            settingsRef.once('value').then(settingsSnap => {
+                const settings = settingsSnap.val();
+                const clinic = clinicsData[call.clinicId];
+
+                // إذا كانت الشاشة غير مكتومة، أضف النداء للقائمة
+                if (!isMuted && clinic) {
+                    window.addCallToQueue({
+                        clinicId: call.clinicId,
+                        number: call.number,
+                        type: call.type,
+                        text: call.text,
+                        audioPath: settings.audioPath || '/audio/',
+                        clinicName: clinic.name
+                    });
+                }
+                
+                // حذف النداء من قائمة Firebase بعد المعالجة (لتجنب تكرار النداء عند إعادة تشغيل الصفحة)
+                snapshot.ref.remove(); 
+            });
+        });
+        
+        // ==========================================================
+        // وظائف التحكم في الصوت
+        // ==========================================================
+        muteToggleBtn.addEventListener('click', () => {
+            isMuted = !isMuted;
+            if (isMuted) {
+                alert("تم كتم الصوت مؤقتاً.");
+                volumeIcon.innerHTML = `<path fill-rule="evenodd" d="M9.383 3.654A1 1 0 0110 3v2.382l2-2h4a1 1 0 011 1v6a1 1 0 01-1 1h-4l-2 2V17a1 1 0 01-.617-.346l-4-4H3a1 1 0 01-1-1V8a1 1 0 011-1h2.383l4-4zM10 5.618v8.764l-4-4H4V7h2.383l4 4V5.618z" clip-rule="evenodd"/>`; // أيقونة كتم الصوت
+            } else {
+                alert("تم تفعيل الصوت.");
+                volumeIcon.innerHTML = `<path d="M10 20a10 10 0 1 1 0-20 10 10 0 0 1 0 20zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM9 9H7V7h2v2zm4 0h-2V7h2v2zM9 13H7v-2h2v2zm4 0h-2v-2h2v2z"/>`; // أيقونة تفعيل الصوت
+            }
+        });
+
+    </script>
 </body>
 </html>
