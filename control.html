@@ -4,7 +4,55 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>صفحة التحكم - المركز الطبي</title>
-للاستفادة الكاملة من كلاسات Tailwind في هذا الملف، يجب أن تقوم بتثبيت Tailwind CSS وتشغيله على ملف input.css ليقوم بتوليد هذا الملف style.css. إذا لم تفعل ذلك، فإن الكلاسات مثل bg-white أو text-blue-800 لن تعمل، وستعمل فقط التنسيقات المخصصة في الأقسام 2 و 3.</head>
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+    /* 1. التنسيقات المخصصة والانتقالات */
+    .clinic-card { transition: all 0.3s; }
+    .blink-animation { animation: pulse 1s infinite; }
+    .notification-banner { transition: top 0.5s ease-out; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .video-player { min-height: 100%; object-fit: cover; }
+
+    /* 2. تنسيقات الطباعة لصفحة التذاكر (ticket.html) */
+    @media print {
+        @page { size: A4 portrait; margin: 0; }
+        body { 
+            margin: 0; padding: 0; 
+            -webkit-print-color-adjust: exact !important; 
+            print-color-adjust: exact !important;
+            font-family: 'Arial', sans-serif;
+        }
+        .no-print { display: none !important; }
+        .ticket-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 50mm); 
+            grid-auto-rows: 50mm;
+            margin: 5mm; 
+            align-content: start;
+            justify-content: start;
+        }
+        .ticket {
+            width: 50mm; height: 50mm;
+            border: 1px dashed #333;
+            box-sizing: border-box;
+            padding: 5mm;
+            background-color: #fff;
+            font-size: 8pt; 
+        }
+        .ticket .text-6xl { font-size: 20pt; line-height: 1.2; }
+        .ticket .text-xl { font-size: 10pt; }
+    }
+
+    /* تنسيق التذكرة للعرض على الشاشة */
+    .ticket {
+        border: 1px dashed #ccc;
+        background-color: #fff;
+        height: 150px; 
+        width: 150px;
+        box-sizing: border-box;
+    }
+</style></head>
 <body class="bg-gray-100 min-h-screen p-4">
 
     <div id="login-screen" class="max-w-md mx-auto bg-white p-8 rounded-xl shadow-2xl mt-10">
