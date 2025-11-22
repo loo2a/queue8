@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>شاشة عرض العملاء - المركز الطبي</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        /* 1. التنسيقات العامة */
+        .clinic-card { transition: all 0.3s; }
+        .blink-animation { animation: pulse 1s infinite; }
+        .notification-banner { transition: top 0.5s ease-out; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .video-player { min-height: 100%; object-fit: cover; }
+
+        /* 2. تخصيص الشاشة الرئيسية */
+        /* شريط الإشعارات (أكبر ومدة 6 ثواني) */
+        #notification-banner { 
+            padding: 1.5rem; /* p-6 */
+            font-size: 2.25rem; /* text-4xl */
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        /* شريط الأخبار المتحرك (أكبر) */
+        footer {
+            height: 2.5rem; /* h-10 */
+            font-size: 1.25rem; /* text-xl */
+        }
+        /* كروت العيادات (أكثر ضغطاً وخط كبير) */
+        .clinic-card { 
+            padding: 0.75rem; /* p-3 */
+        }
+        .clinic-card h3 {
+            font-size: 1.5rem; /* text-2xl */
+        }
+        .clinic-card .text-6xl {
+            font-size: 3.5rem; /* text-5xl */
+        }
+        /* لإخفاء روابط الإدارة الافتراضية */
+        #admin-links { display: none; }
+    </style>
+</head>
+<body class="bg-gray-50 flex flex-col h-screen overflow-hidden">
+
+    <div id="notification-banner" class="notification-banner fixed top-[-100px] right-0 left-0 text-white z-50 shadow-2xl font-bold flex justify-between items-center">
+        <span id="notification-text"></span>
+        <span id="notification-time" class="text-xl opacity-80"></span>
+    </div>
+
+    <header class="h-10 bg-blue-800 text-white flex justify-between items-center px-4 shadow-lg text-lg font-bold">
+        <div id="center-name">شاشة نداء العملاء</div>
+        <div class="flex space-x-4 space-x-reverse">
+            <span id="current-time">--:--:--</span>
+            <span id="current-date">--/--/----</span>
+        </div>
+    </header>
+
+    <main class="flex-grow flex p-2 space-x-2 space-x-reverse overflow-hidden">
+        
+        <section class="w-1/3 flex flex-col space-y-2 overflow-y-auto" id="clinics-container">
+            <h2 class="text-xl font-bold text-gray-700 p-2 border-b">العيادات الحالية</h2>
+            </section>
+
+        <section class="w-2/3 bg-gray-200 rounded-lg overflow-hidden flex justify-center items-center relative">
+            <video id="media-player" class="video-player w-full h-full" autoplay muted loop playsinline></video>
+            <div id="media-placeholder" class="absolute text-2xl text-gray-500 font-semibold" style="display:none;">
+                جارٍ تحميل محتوى التوعية...
+            </div>
+        </section>
+    </main>
+
+    <footer class="h-10 bg-blue-900 text-white text-xl overflow-hidden">
+        <marquee id="scroll-text" direction="right" scrollamount="6" class="py-1">
+            محتوى شريط الأخبار المتحرك الافتراضي.
+        </marquee>
+    </footer>
+
+    <button id="mute-toggle" class="fixed bottom-20 left-4 p-3 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 z-50">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 110 7.072L10.96 11H7a1 1 0 01-1-1V9a1 1 0 011-1h3.96l4.576-2.536z" />
+        </svg>
+    </button>
+    
+    <button id="toggle-admin-links" class="fixed bottom-4 left-4 p-2 bg-gray-700 text-white rounded-md shadow-lg hover:bg-gray-800 z-50 text-sm">
+        الروابط
+    </button>
+    
+    <div id="admin-links" class="fixed bottom-12 left-4 bg-white p-4 rounded-lg shadow-xl border border-gray-200 z-50 w-64 space-y-2">
+        <a href="control.html" class="block text-blue-600 hover:text-blue-800 font-medium border-b pb-1">صفحة التحكم</a>
+        <a href="admin.html" class="block text-blue-600 hover:text-blue-800 font-medium border-b pb-1">صفحة الإدارة</a>
+        <a href="ticket.html" class="block text-blue-600 hover:text-blue-800 font-medium">طباعة التذاكر</a>
+    </div>
+    
+    <script>
+        document.getElementById('toggle-admin-links').addEventListener('click', function() {
+            const links = document.getElementById('admin-links');
+            links.style.display = links.style.display === 'none' ? 'block' : 'none';
+        });
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+    <script type="module" src="js/firebaseConfig.js"></script>
+    <script type="module" src="js/textToSpeech.js"></script>
+    <script type="module" src="js/display.js"></script>
+</body>
+</html>
