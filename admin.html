@@ -4,157 +4,378 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>صفحة الإدارة - المركز الطبي</title>
-<script src="https://cdn.tailwindcss.com"></script>
-
-<style>
-    /* 1. التنسيقات المخصصة والانتقالات */
-    .clinic-card { transition: all 0.3s; }
-    .blink-animation { animation: pulse 1s infinite; }
-    .notification-banner { transition: top 0.5s ease-out; }
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-    .video-player { min-height: 100%; object-fit: cover; }
-
-    /* 2. تنسيقات الطباعة لصفحة التذاكر (ticket.html) */
-    @media print {
-        @page { size: A4 portrait; margin: 0; }
-        body { 
-            margin: 0; padding: 0; 
-            -webkit-print-color-adjust: exact !important; 
-            print-color-adjust: exact !important;
-            font-family: 'Arial', sans-serif;
-        }
-        .no-print { display: none !important; }
-        .ticket-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 50mm); 
-            grid-auto-rows: 50mm;
-            margin: 5mm; 
-            align-content: start;
-            justify-content: start;
-        }
-        .ticket {
-            width: 50mm; height: 50mm;
-            border: 1px dashed #333;
-            box-sizing: border-box;
-            padding: 5mm;
-            background-color: #fff;
-            font-size: 8pt; 
-        }
-        .ticket .text-6xl { font-size: 20pt; line-height: 1.2; }
-        .ticket .text-xl { font-size: 10pt; }
-    }
-
-    /* تنسيق التذكرة للعرض على الشاشة */
-    .ticket {
-        border: 1px dashed #ccc;
-        background-color: #fff;
-        height: 150px; 
-        width: 150px;
-        box-sizing: border-box;
-    }
-</style>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 </head>
-<body class="bg-gray-100 min-h-screen p-6">
+<body class="bg-gray-50 p-8">
 
-    <div class="max-w-6xl mx-auto bg-white p-8 rounded-xl shadow-2xl">
-        <h2 class="text-3xl font-bold text-center text-blue-800 border-b pb-4 mb-8">لوحة تحكم النظام المركزي</h2>
-        
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            <section class="lg:col-span-1 bg-blue-50 p-6 rounded-lg shadow-inner">
-                <h3 class="text-xl font-semibold text-blue-700 border-b pb-2 mb-4">الإعدادات العامة</h3>
-                <form id="settings-form" class="space-y-4">
-                    <label class="block">
-                        <span class="text-gray-700">اسم المركز:</span>
-                        <input type="text" id="center-name-input" class="form-input mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" required>
-                    </label>
-                    <label class="block">
-                        <span class="text-gray-700">سرعة النطق (1.0 افتراضي):</span>
-                        <input type="number" step="0.1" min="0.5" max="2.0" id="audio-speed-input" class="form-input mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
-                    </label>
-                    <label class="block">
-                        <span class="text-gray-700">محتوى شريط الأخبار المتحرك:</span>
-                        <textarea id="scroll-text-input" class="form-textarea mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2" rows="2"></textarea>
-                    </label>
-                    <label class="block">
-                        <span class="text-gray-700">مسار الصوت الافتراضي (مثلاً: audio/):</span>
-                        <input type="text" id="audio-path-input" class="form-input mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
-                    </label>
-                    <label class="block">
-                        <span class="text-gray-700">مسار الميديا الافتراضي (مثلاً: media/):</span>
-                        <input type="text" id="media-path-input" class="form-input mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
-                    </label>
-                    <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded-lg font-bold hover:bg-blue-700 transition">حفظ الإعدادات</button>
-                </form>
-            </section>
-
-            <section class="lg:col-span-2 bg-green-50 p-6 rounded-lg shadow-inner">
-                <h3 class="text-xl font-semibold text-green-700 border-b pb-2 mb-4">إدارة العيادات (CRUD)</h3>
-                
-                <form id="clinic-form" class="grid grid-cols-4 gap-4 mb-6">
-                    <input type="hidden" id="clinic-id-edit">
-                    <input type="text" id="clinic-name-input" placeholder="اسم العيادة" class="col-span-2 p-2 border rounded-md" required>
-                    <input type="password" id="clinic-password-input" placeholder="كلمة السر" class="col-span-1 p-2 border rounded-md" required>
-                    <button type="submit" id="clinic-submit-btn" class="col-span-1 bg-green-600 text-white rounded-md font-bold hover:bg-green-700 transition">إضافة عيادة</button>
-                </form>
-                
-                <div id="clinics-list" class="space-y-2">
-                    </div>
-            </section>
-        </div>
-
-        <section class="mt-8">
-            <h3 class="text-2xl font-semibold text-gray-700 border-b pb-2 mb-4">النداءات الفورية، التقييم والسجل</h3>
-            
-            <div class="grid grid-cols-2 gap-4">
-                <div class="bg-yellow-50 p-4 rounded-lg shadow">
-                    <h4 class="font-bold mb-2">نداء فوري وملفات جاهزة</h4>
-                    <div class="flex space-x-2 space-x-reverse mb-2">
-                        <input type="text" id="tts-call-text" placeholder="نطق نص مخصص (TTS)" class="flex-grow p-2 border rounded-md">
-                        <button id="btn-tts-call" class="bg-yellow-600 text-white p-2 rounded-md font-bold">نطق</button>
-                    </div>
-                    <div class="flex space-x-2 space-x-reverse">
-                        <select id="instant-audio-select" class="flex-grow p-2 border rounded-md">
-                            <option value="">اختر ملف صوت جاهز...</option>
-                            <option value="welcome.mp3">مرحباً</option>
-                            <option value="notice.mp3">تنبيه هام</option>
-                        </select>
-                        <button id="btn-instant-call" class="bg-yellow-700 text-white p-2 rounded-md font-bold">إذاعة</button>
-                    </div>
-                </div>
-
-                <div class="bg-purple-50 p-4 rounded-lg shadow">
-                    <h4 class="font-bold mb-2">إحصائيات التقييم (اقتراح إضافي)</h4>
-                    <p class="text-xl font-bold text-gray-700">متوسط التقييم العام:</p>
-                    <p id="avg-rating" class="text-4xl font-black text-purple-700">---</p>
-                    <button id="view-ratings" class="mt-2 bg-purple-600 text-white p-2 rounded-md font-bold hover:bg-purple-700 transition">عرض التفاصيل</button>
-                </div>
-            </div>
-            
-            <div class="mt-6 bg-gray-50 p-4 rounded-lg shadow">
-                <h4 class="font-bold mb-2">سجل آخر 20 نداء</h4>
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead>
-                            <tr>
-                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الرقم</th>
-                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">العيادة</th>
-                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">النوع</th>
-                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">التوقيت</th>
-                            </tr>
-                        </thead>
-                        <tbody id="calls-log" class="bg-white divide-y divide-gray-200">
-                            </tbody>
-                    </table>
-                </div>
-            </div>
-
-        </section>
-
+    <div id="authScreen" class="max-w-md mx-auto bg-white p-6 rounded-xl shadow-lg mt-20">
+        <h2 class="text-3xl font-bold text-center text-blue-700 mb-6">تسجيل الدخول للإدارة</h2>
+        <input type="password" id="adminPassword" placeholder="كلمة مرور المدير" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-lg">
+        <button id="loginBtn" class="mt-4 w-full bg-blue-600 text-white p-3 rounded-lg text-xl hover:bg-blue-700 transition">دخول</button>
+        <p id="authError" class="text-red-500 text-center mt-3 hidden">كلمة المرور غير صحيحة.</p>
     </div>
 
-    <script type="module" src="js/firebaseConfig.js"></script>
-    <script type="module" src="js/textToSpeech.js"></script>
-    <script type="module" src="js/admin.js"></script>
+    <div id="adminPanel" class="hidden max-w-4xl mx-auto bg-white p-6 rounded-xl shadow-lg">
+        <h1 class="text-4xl font-extrabold text-blue-800 mb-8 text-center">لوحة تحكم الإدارة</h1>
+        
+        <div id="accordion-collapse" data-accordion="collapse">
+
+            <h2 id="accordion-collapse-heading-1">
+                <button type="button" class="flex items-center justify-between w-full p-5 font-medium rtl:text-right text-gray-500 border border-b-0 border-gray-200 rounded-t-xl focus:ring-4 focus:ring-blue-200 hover:bg-gray-100 gap-3" data-accordion-target="#accordion-collapse-body-1" aria-expanded="true" aria-controls="accordion-collapse-body-1">
+                    <span>الإعدادات العامة ومسارات الملفات</span>
+                </button>
+            </h2>
+            <div id="accordion-collapse-body-1" class="hidden" aria-labelledby="accordion-collapse-heading-1">
+                <div class="p-5 border border-b-0 border-gray-200">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="centerNameInput" class="block text-sm font-medium text-gray-700">اسم المركز</label>
+                            <input type="text" id="centerNameInput" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div>
+                            <label for="adminPasswordInput" class="block text-sm font-medium text-gray-700">كلمة مرور المدير الجديدة</label>
+                            <input type="password" id="adminPasswordInput" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div>
+                            <label for="audioPathInput" class="block text-sm font-medium text-gray-700">مسار مجلد الصوت الافتراضي (مثلاً: /audio/)</label>
+                            <input type="text" id="audioPathInput" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div>
+                            <label for="mediaPathInput" class="block text-sm font-medium text-gray-700">مسار مجلد الميديا الافتراضي (مثلاً: /media/)</label>
+                            <input type="text" id="mediaPathInput" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div>
+                            <label for="speedInput" class="block text-sm font-medium text-gray-700">سرعة النطق (1.0 = عادي، 0.5 = بطيء، 2.0 = سريع)</label>
+                            <input type="number" step="0.1" min="0.5" max="2.0" id="speedInput" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <label for="newsTickerInput" class="block text-sm font-medium text-gray-700">محتوى شريط الأخبار المتحرك</label>
+                        <textarea id="newsTickerInput" rows="3" class="mt-1 block w-full p-2 border border-gray-300 rounded-md"></textarea>
+                    </div>
+                    <button onclick="saveSettings()" class="mt-4 bg-green-600 text-white p-3 rounded-lg text-lg hover:bg-green-700 transition">حفظ الإعدادات العامة</button>
+                </div>
+            </div>
+            
+            <h2 id="accordion-collapse-heading-2">
+                <button type="button" class="flex items-center justify-between w-full p-5 font-medium rtl:text-right text-gray-500 border border-b-0 border-gray-200 focus:ring-4 focus:ring-blue-200 hover:bg-gray-100 gap-3" data-accordion-target="#accordion-collapse-body-2" aria-expanded="false" aria-controls="accordion-collapse-body-2">
+                    <span>إدارة العيادات</span>
+                </button>
+            </h2>
+            <div id="accordion-collapse-body-2" class="hidden" aria-labelledby="accordion-collapse-heading-2">
+                <div class="p-5 border border-b-0 border-gray-200">
+                    <div class="bg-blue-50 p-4 rounded-lg mb-4">
+                        <h3 class="text-xl font-semibold mb-3 text-blue-700">إضافة/تعديل عيادة</h3>
+                        <div class="grid grid-cols-4 gap-3">
+                            <input type="number" id="clinicId" placeholder="رقم العيادة (ID)" class="p-2 border rounded-md">
+                            <input type="text" id="clinicName" placeholder="اسم العيادة" class="p-2 border rounded-md col-span-2">
+                            <input type="password" id="clinicPassword" placeholder="كلمة السر" class="p-2 border rounded-md">
+                            <button onclick="addUpdateClinic()" class="col-span-4 bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition">حفظ العيادة</button>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">رقم</th>
+                                    <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">الاسم</th>
+                                    <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">الرقم الحالي</th>
+                                    <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">الحالة</th>
+                                    <th class="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="clinicsTableBody" class="bg-white divide-y divide-gray-200">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <h2 id="accordion-collapse-heading-3">
+                <button type="button" class="flex items-center justify-between w-full p-5 font-medium rtl:text-right text-gray-500 border border-b-0 border-gray-200 focus:ring-4 focus:ring-blue-200 hover:bg-gray-100 gap-3" data-accordion-target="#accordion-collapse-body-3" aria-expanded="false" aria-controls="accordion-collapse-body-3">
+                    <span>أدوات النداء والإذاعة الفورية</span>
+                </button>
+            </h2>
+            <div id="accordion-collapse-body-3" class="hidden" aria-labelledby="accordion-collapse-heading-3">
+                <div class="p-5 border border-b border-gray-200">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                        <div class="bg-yellow-50 p-4 rounded-lg">
+                            <h3 class="text-xl font-semibold mb-3 text-yellow-700">نداء عميل معين بالرقم</h3>
+                            <select id="callClinicSelect" class="w-full p-2 border rounded-md mb-2"></select>
+                            <input type="number" id="callNumberInput" placeholder="أدخل رقم العميل" class="w-full p-2 border rounded-md mb-2">
+                            <button onclick="adminCallNumber()" class="w-full bg-yellow-600 text-white p-2 rounded-lg hover:bg-yellow-700 transition">نداء الرقم المحدد</button>
+                        </div>
+
+                        <div class="bg-purple-50 p-4 rounded-lg">
+                            <h3 class="text-xl font-semibold mb-3 text-purple-700">نداء باسم/إعلان صوتي (TTS)</h3>
+                            <input type="text" id="ttsTextInput" placeholder="النص المطلوب نُطقه (مثلاً: محمد أحمد)" class="w-full p-2 border rounded-md mb-2">
+                            <select id="ttsClinicSelect" class="w-full p-2 border rounded-md mb-2"></select>
+                            <button onclick="adminCallName()" class="w-full bg-purple-600 text-white p-2 rounded-lg hover:bg-purple-700 transition">عرض ونطق الاسم</button>
+                        </div>
+
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <h3 class="text-xl font-semibold mb-3 text-green-700">إذاعة ملف صوتي جاهز</h3>
+                            <select id="instantAudioSelect" class="w-full p-2 border rounded-md mb-2">
+                                <option value="/instant/welcome.mp3">رسالة ترحيب</option>
+                                <option value="/instant/warning.mp3">تنبيه هام</option>
+                            </select>
+                            <button onclick="adminPlayInstantAudio()" class="w-full bg-green-600 text-white p-2 rounded-lg hover:bg-green-700 transition">إذاعة الملف</button>
+                        </div>
+
+                        <div class="bg-red-50 p-4 rounded-lg">
+                            <h3 class="text-xl font-semibold mb-3 text-red-700">تسجيل صوتي وإذاعته</h3>
+                            <button id="startRecordBtn" class="w-full bg-red-600 text-white p-2 rounded-lg hover:bg-red-700 transition">بدء التسجيل</button>
+                            <button id="stopRecordBtn" class="w-full bg-gray-500 text-white p-2 rounded-lg hover:bg-gray-600 transition mt-2" disabled>إيقاف الإذاعة</button>
+                            <audio id="recordedAudioPlayer" controls class="w-full mt-2 hidden"></audio>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="js/script.js"></script>
+
+    <script>
+        let currentAdminPassword = '';
+        let clinicsList = {};
+        
+        // ==========================================================
+        // وظائف المصادقة
+        // ==========================================================
+        document.getElementById('loginBtn').addEventListener('click', () => {
+            const inputPass = document.getElementById('adminPassword').value;
+            if (inputPass === currentAdminPassword && currentAdminPassword !== '') {
+                document.getElementById('authScreen').classList.add('hidden');
+                document.getElementById('adminPanel').classList.remove('hidden');
+            } else {
+                const errorEl = document.getElementById('authError');
+                errorEl.textContent = 'كلمة المرور غير صحيحة.';
+                errorEl.classList.remove('hidden');
+            }
+        });
+        
+        // ==========================================================
+        // قراءة الإعدادات والعيادات
+        // ==========================================================
+        db.ref('/').on('value', snapshot => {
+            const data = snapshot.val();
+            if (!data) return;
+
+            const settings = data.settings || {};
+            clinicsList = data.clinics || {};
+            
+            // تحديث الإعدادات
+            currentAdminPassword = settings.adminPassword || '123';
+            document.getElementById('centerNameInput').value = settings.centerName || '';
+            document.getElementById('audioPathInput').value = settings.audioPath || '/audio/';
+            document.getElementById('mediaPathInput').value = settings.mediaPath || '/media/';
+            document.getElementById('speedInput').value = settings.speed || 1.0;
+            document.getElementById('newsTickerInput').value = settings.newsTicker || '';
+            
+            // تحديث جدول العيادات وقوائم الاختيار
+            renderClinicsTable();
+        });
+
+        function renderClinicsTable() {
+            const tableBody = document.getElementById('clinicsTableBody');
+            const callClinicSelect = document.getElementById('callClinicSelect');
+            const ttsClinicSelect = document.getElementById('ttsClinicSelect');
+            
+            tableBody.innerHTML = '';
+            callClinicSelect.innerHTML = '<option value="">-- اختر عيادة --</option>';
+            ttsClinicSelect.innerHTML = '<option value="">-- اختر عيادة --</option>';
+
+            Object.keys(clinicsList).forEach(id => {
+                const clinic = clinicsList[id];
+                const row = tableBody.insertRow();
+                row.className = 'text-center';
+                
+                row.insertCell().textContent = clinic.id;
+                row.insertCell().textContent = clinic.name;
+                row.insertCell().textContent = clinic.currentNumber;
+                row.insertCell().textContent = clinic.status === 'active' ? 'نشط' : 'متوقف';
+                
+                const actionsCell = row.insertCell();
+                actionsCell.innerHTML = `
+                    <button onclick="editClinic(${id})" class="text-blue-600 hover:text-blue-900 mx-1">تعديل</button>
+                    <button onclick="deleteClinic(${id})" class="text-red-600 hover:text-red-900 mx-1">حذف</button>
+                `;
+
+                callClinicSelect.innerHTML += `<option value="${clinic.id}">${clinic.name} (${clinic.id})</option>`;
+                ttsClinicSelect.innerHTML += `<option value="${clinic.id}">${clinic.name} (${clinic.id})</option>`;
+            });
+        }
+        
+        // ==========================================================
+        // وظائف الإعدادات والعيادات (CRUD)
+        // ==========================================================
+
+        function saveSettings() {
+            const newAdminPassword = document.getElementById('adminPasswordInput').value;
+            const updates = {
+                centerName: document.getElementById('centerNameInput').value,
+                audioPath: document.getElementById('audioPathInput').value,
+                mediaPath: document.getElementById('mediaPathInput').value,
+                speed: parseFloat(document.getElementById('speedInput').value),
+                newsTicker: document.getElementById('newsTickerInput').value,
+            };
+            if (newAdminPassword) {
+                 updates.adminPassword = newAdminPassword;
+            }
+            
+            db.ref('settings').update(updates)
+                .then(() => alert('تم حفظ الإعدادات بنجاح!'))
+                .catch(error => alert('فشل الحفظ: ' + error.message));
+        }
+
+        function addUpdateClinic() {
+            const id = document.getElementById('clinicId').value;
+            const name = document.getElementById('clinicName').value;
+            const password = document.getElementById('clinicPassword').value;
+            
+            if (!id || !name || !password) {
+                alert('الرجاء إدخال رقم واسم وكلمة سر للعيادة.');
+                return;
+            }
+
+            const isNew = !clinicsList[id];
+            const clinicRef = db.ref(`clinics/${id}`);
+            
+            // الحفاظ على الرقم الحالي وعدد التذاكر إذا كانت عملية تعديل
+            const currentNumber = isNew ? 0 : clinicsList[id].currentNumber;
+            const ticketCounter = isNew ? 0 : clinicsList[id].ticketCounter;
+            const status = isNew ? 'active' : clinicsList[id].status;
+
+            clinicRef.set({
+                id: parseInt(id),
+                name: name,
+                password: password,
+                currentNumber: currentNumber,
+                ticketCounter: ticketCounter,
+                status: status
+            }).then(() => {
+                alert(`تم ${isNew ? 'إضافة' : 'تعديل'} العيادة بنجاح.`);
+                // مسح الحقول
+                document.getElementById('clinicId').value = '';
+                document.getElementById('clinicName').value = '';
+                document.getElementById('clinicPassword').value = '';
+            }).catch(error => alert('فشل العملية: ' + error.message));
+        }
+
+        function editClinic(id) {
+            const clinic = clinicsList[id];
+            if (clinic) {
+                document.getElementById('clinicId').value = clinic.id;
+                document.getElementById('clinicName').value = clinic.name;
+                document.getElementById('clinicPassword').value = clinic.password;
+                alert(`تعديل بيانات العيادة رقم ${id}`);
+            }
+        }
+
+        function deleteClinic(id) {
+            if (confirm(`هل أنت متأكد من حذف العيادة رقم ${id}؟`)) {
+                db.ref(`clinics/${id}`).remove()
+                    .then(() => alert('تم حذف العيادة بنجاح.'))
+                    .catch(error => alert('فشل الحذف: ' + error.message));
+            }
+        }
+        
+        // ==========================================================
+        // وظائف أدوات النداء والإذاعة الفورية
+        // ==========================================================
+        
+        function adminCallNumber() {
+            const clinicId = document.getElementById('callClinicSelect').value;
+            const number = parseInt(document.getElementById('callNumberInput').value);
+            
+            if (!clinicId || isNaN(number) || number <= 0) {
+                alert('الرجاء اختيار العيادة وإدخال رقم صحيح.');
+                return;
+            }
+            
+            // استخدام دالة callNumber المشتركة
+            window.callNumber(parseInt(clinicId), number, 'normal');
+            alert(`تم إرسال نداء للعميل رقم ${number} في عيادة ${clinicId}.`);
+        }
+
+        function adminCallName() {
+            const text = document.getElementById('ttsTextInput').value;
+            const clinicId = document.getElementById('ttsClinicSelect').value;
+            
+            if (!text || !clinicId) {
+                alert('الرجاء كتابة النص واختيار العيادة.');
+                return;
+            }
+
+            // استخدام دالة callNumber بنوع 'name'
+            window.callNumber(parseInt(clinicId), 0, 'name', text);
+            alert(`تم إرسال نداء نصي لـ ${text} في عيادة ${clinicId}.`);
+        }
+        
+        function adminPlayInstantAudio() {
+            const instantFile = document.getElementById('instantAudioSelect').value;
+            // نستخدم clinicId=1 كإجراء صوري لربط النداء بـ Banner
+            window.callNumber(1, 0, 'instant', instantFile);
+            alert(`تم إرسال طلب إذاعة للملف: ${instantFile}`);
+        }
+
+        // ==========================================================
+        // وظائف تسجيل الصوت (MediaRecorder) - تحتاج HTTPS أو localhost
+        // ==========================================================
+        let mediaRecorder;
+        let audioChunks = [];
+        const startRecordBtn = document.getElementById('startRecordBtn');
+        const stopRecordBtn = document.getElementById('stopRecordBtn');
+        const recordedAudioPlayer = document.getElementById('recordedAudioPlayer');
+
+        startRecordBtn.addEventListener('click', async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+                
+                mediaRecorder.ondataavailable = event => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    recordedAudioPlayer.src = audioUrl;
+                    recordedAudioPlayer.classList.remove('hidden');
+                    
+                    // نداء الصوت المسجل (ملاحظة: هذا النداء يعتمد على URL مؤقت)
+                    // في نظام احترافي يجب رفع الملف إلى Firebase Storage أولاً
+                    window.callNumber(1, 0, 'record', audioUrl);
+                    alert('تم الانتهاء من التسجيل وإذاعته.');
+                    stream.getTracks().forEach(track => track.stop());
+                    startRecordBtn.disabled = false;
+                    stopRecordBtn.disabled = true;
+                };
+
+                mediaRecorder.start();
+                startRecordBtn.disabled = true;
+                stopRecordBtn.disabled = false;
+                alert('بدء التسجيل...');
+
+            } catch (err) {
+                console.error('فشل الوصول للميكروفون:', err);
+                alert('فشل الوصول للميكروفون. تأكد من استخدام HTTPS.');
+            }
+        });
+
+        stopRecordBtn.addEventListener('click', () => {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+            }
+        });
+    </script>
 </body>
 </html>
