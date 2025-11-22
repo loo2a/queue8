@@ -6,15 +6,19 @@
     <title>طباعة تذاكر العملاء</title>
 <script src="https://cdn.tailwindcss.com"></script>
 
-<style>
-    /* 1. التنسيقات المخصصة والانتقالات */
-    .clinic-card { transition: all 0.3s; }
-    .blink-animation { animation: pulse 1s infinite; }
-    .notification-banner { transition: top 0.5s ease-out; }
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-    .video-player { min-height: 100%; object-fit: cover; }
+<script src="https://cdn.tailwindcss.com"></script>
 
-    /* 2. تنسيقات الطباعة لصفحة التذاكر (ticket.html) */
+<style>
+    /* تنسيق التذكرة للعرض على الشاشة */
+    .ticket {
+        border: 1px dashed #ccc;
+        background-color: #fff;
+        height: 150px; 
+        width: 150px;
+        box-sizing: border-box;
+    }
+
+    /* تنسيقات الطباعة (هنا الأهم) */
     @media print {
         @page { size: A4 portrait; margin: 0; }
         body { 
@@ -43,16 +47,7 @@
         .ticket .text-6xl { font-size: 20pt; line-height: 1.2; }
         .ticket .text-xl { font-size: 10pt; }
     }
-
-    /* تنسيق التذكرة للعرض على الشاشة */
-    .ticket {
-        border: 1px dashed #ccc;
-        background-color: #fff;
-        height: 150px; 
-        width: 150px;
-        box-sizing: border-box;
-    }
-</style>    <style>
+</style>  <style>
         /* تخطيط الطباعة لتذاكر 5سم * 5سم على A4 */
         @media print {
             @page {
