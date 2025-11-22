@@ -1,0 +1,122 @@
+/* style.css */
+
+/* * هذا الملف هو ناتج عملية بناء Tailwind CSS. 
+ * يحتوي على جميع كلاسات Tailwind الأساسية 
+ * بالإضافة إلى التنسيقات المخصصة لـ:
+ * 1. حركات الوميض (Blink)
+ * 2. الانتقالات (Transitions)
+ * 3. تخطيط الطباعة (Ticket Printing Layout)
+ */
+
+/* * -------------------------------------------
+ * 1. تعليمات Tailwind الأساسية (يتم توليدها تلقائياً)
+ * -------------------------------------------
+ */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+/* * -------------------------------------------
+ * 2. التنسيقات المخصصة (يجب إضافتها يدوياً قبل البناء)
+ * -------------------------------------------
+ */
+
+/* لضمان سلاسة حركة شريط الإشعارات (Notification Banner) */
+.notification-banner {
+    transition: top 0.5s ease-out;
+}
+
+/* حركة الوميض لكارت العيادة عند النداء (Blink Animation) */
+.blink-animation { 
+    animation: pulse 1s infinite; 
+}
+
+@keyframes pulse { 
+    0%, 100% { 
+        opacity: 1; 
+    } 
+    50% { 
+        opacity: 0.5; 
+    } 
+}
+
+/* لضمان الانتقال السلس للكروت عند التحديث */
+.clinic-card { 
+    transition: all 0.3s; 
+}
+
+/* لتشغيل الميديا بشكل متسلسل وتغطية المساحة */
+.video-player { 
+    min-height: 100%; 
+    object-fit: cover; 
+}
+
+/* * -------------------------------------------
+ * 3. تنسيقات الطباعة لصفحة التذاكر (ticket.html)
+ * -------------------------------------------
+ */
+
+/* تنسيقات الطباعة */
+@media print {
+    /* إعدادات صفحة A4 */
+    @page {
+        size: A4 portrait;
+        margin: 0;
+    }
+    
+    body { 
+        margin: 0; 
+        padding: 0; 
+        /* لضمان طباعة الخلفيات والألوان (مهم جداً للـ grid/border) */
+        -webkit-print-color-adjust: exact !important; 
+        print-color-adjust: exact !important;
+        font-family: 'Arial', sans-serif;
+    }
+    
+    /* إخفاء عناصر التحكم */
+    .no-print { 
+        display: none !important; 
+    }
+    
+    /* تخطيط الشبكة للتذاكر (Grid Layout) */
+    .ticket-grid {
+        display: grid;
+        /* A4 (210mm x 297mm). 5cm ticket, 4 tickets width (20cm) */
+        grid-template-columns: repeat(4, 50mm); 
+        grid-auto-rows: 50mm; /* ارتفاع كل صف 5 سم */
+        margin: 5mm; /* هامش بسيط حول الشبكة */
+        align-content: start;
+        justify-content: start;
+    }
+    
+    /* تنسيق التذكرة الواحدة (5 سم * 5 سم) */
+    .ticket {
+        width: 50mm;
+        height: 50mm;
+        border: 1px dashed #333;
+        box-sizing: border-box; /* لضمان أن الحدود لا تزيد الحجم */
+        padding: 5mm;
+        background-color: #fff;
+        /* إعادة تعيين تنسيقات النص لضمان وضوح الطباعة */
+        font-size: 8pt; 
+    }
+    
+    /* تنسيق الأرقام الكبيرة داخل التذكرة */
+    .ticket .text-6xl {
+        font-size: 20pt; /* تصغير حجم النص ليتناسب مع 5سم */
+        line-height: 1.2;
+    }
+    .ticket .text-xl {
+        font-size: 10pt;
+    }
+}
+
+/* تنسيق التذكرة للعرض على الشاشة (في وضع non-print) */
+.ticket {
+    border: 1px dashed #ccc;
+    background-color: #fff;
+    height: 150px; 
+    width: 150px;
+    box-sizing: border-box;
+}
