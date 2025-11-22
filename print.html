@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>طباعة تذاكر الانتظار</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        /* التنسيقات المطبوعة */
+        @media print {
+            body {
+                margin: 0;
+                padding: 0;
+            }
+            .no-print {
+                display: none !important;
+            }
+            /* تحديد حجم شبكة A4 5x5 cm */
+            .ticket-grid {
+                display: grid;
+                grid-template-columns: repeat(4, 50mm); /* تقريباً 4 أعمدة على A4 Portrait */
+                grid-auto-rows: 50mm;
+                page-break-after: always; /* ابدأ صفحة جديدة بعد الطباعة */
+            }
+            .ticket-box {
+                width: 50mm;
+                height: 50mm;
+                border: 1px solid #000;
+                padding: 5mm;
+                box-sizing: border-box;
+                overflow: hidden;
+            }
+            .ticket-number {
+                font-size: 20pt; 
+                font-weight: bold;
+                color: #B91C1C; /* Red */
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 p-8">
+
+    <div id="printControls" class="no-print max-w-xl mx-auto bg-white p-6 rounded-xl shadow-lg mb-8">
+        <h1 class="text-3xl font-bold text-blue-700 mb-6 text-center">طباعة تذاكر الانتظار</h1>
+        
+        <div class="mb-4">
+            <label for="clinicSelect" class="block text-lg font-medium text-gray-700 mb-2">اختر العيادة</label>
+            <select id="clinicSelect" class="w-full p-3 border border-gray-300 rounded-lg text-lg">
+                <option value="">-- اختر العيادة --</option>
+            </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 mb-6">
+            <div>
+                <label for="numTickets" class="block text-lg font-medium text-gray-700 mb-2">عدد التذاكر للطباعة</label>
+                <input type="number" id="numTickets" value="5" min="1" max="20" class="w-full p-3 border rounded-lg text-lg">
+            </div>
+            <div>
+                <label for="avgWaitTime" class="block text-lg font-medium text-gray-700 mb-2">متوسط وقت الخدمة (دقيقة/عميل)</label>
+                <input type="number" id="avgWaitTime" value="5" min="1" class="w-full p-3 border rounded-lg text-lg">
+            </div>
+        </div>
+        
+        <button onclick="generateAndPrintTickets()" class="w-full bg-blue-600 text-white p-3 rounded-lg text-xl font-bold hover:bg-blue-700 transition">توليد وتخصيص وطباعة التذاكر</button>
+    </div>
+
+    <div id="printArea" class="max-w-7xl mx-auto p-4 bg-white shadow-xl">
+        <div id="ticketGrid" class="ticket-grid p-2">
+            </div>
+    </div>
+
+    <script src="js/script.js"></script>
+    
+    <script>
+        let clinicsData = {};
+
+        // ==========================================================
+        // قراءة العيادات
+        // ==========================================================
+        db.ref('clinics').on('value', snapshot => {
+            clinicsData = snapshot.val() || {};
+            const selectEl = document.getElementById('clinicSelect');
+            selectEl.innerHTML = '<option value="">-- اختر العيادة --</option>';
+            Object.keys(clinicsData).forEach(id => {
+                const clinic = clinicsData[id];
+                selectEl.innerHTML += `<option value="${id}">${clinic.name} (الدور الحالي: ${clinic.currentNumber})</option>`;
+            });
+        });
+        
+        // ==========================================================
+        // توليد التذاكر والطباعة
+        // ==========================================================
+        async function generateAndPrintTickets() {
+            const clinicId = document.getElementById('clinicSelect').value;
+            const numTickets = parseInt(document.getElementById('numTickets').value);
+            const avgWaitTime = parseInt(document.getElementById('avgWaitTime').value);
+            
+            if (!clinicId || !clinicsData[clinicId] || numTickets <= 0) {
+                alert('الرجاء اختيار عيادة وتحديد عدد صحيح للتذاكر.');
+                return;
+            }
+
+            const clinicRef = db.ref(`clinics/${clinicId}`);
+            
+            // 1. تخصيص الأرقام الجديدة (زيادة العداد)
+            const clinic = clinicsData[clinicId];
+            const startNumber = clinic.ticketCounter + 1;
+            const endNumber = clinic.ticketCounter + numTickets;
+            
+            try {
+                // تحديث عداد التذاكر فقط (رقم العميل الحالي يبقى كما هو)
+                await clinicRef.update({ ticketCounter: endNumber });
+                
+                const ticketGrid = document.getElementById('ticketGrid');
+                ticketGrid.innerHTML = ''; // تفريغ المنطقة
+                
+                // 2. إنشاء محتوى التذاكر
+                for (let num = startNumber; num <= endNumber; num++) {
+                    const waiting = num - clinic.currentNumber - 1;
+                    const waitTime = waiting > 0 ? waiting * avgWaitTime : 0;
+                    
+                    const ticketHTML = `
+                        <div class="ticket-box flex flex-col justify-between items-center text-center">
+                            <p class="text-sm text-gray-600">${clinic.name}</p>
+                            <p class="text-xl font-medium text-gray-800">تذكرة رقم</p>
+                            <span class="ticket-number">${num}</span>
+                            <p class="text-xs text-gray-500">انتظار: ${Math.max(0, waiting)} عميل</p>
+                            <p class="text-xs text-gray-500">وقت تقديري: ${waitTime} دقيقة</p>
+                        </div>
+                    `;
+                    ticketGrid.innerHTML += ticketHTML;
+                }
+                
+                // 3. الطباعة
+                setTimeout(() => {
+                    window.print();
+                    // بعد الطباعة، يمكن إخفاء منطقة الطباعة
+                    ticketGrid.innerHTML = '';
+                }, 500); 
+
+            } catch (error) {
+                alert('فشل توليد التذاكر أو تحديث قاعدة البيانات: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
